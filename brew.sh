@@ -28,5 +28,6 @@ brew install --cask visual-studio-code
 brew install --cask rectangle
 brew install --cask iterm2
 brew install --cask vlc
+brew install --cask espanso
 
 echo "🎉 All apps installed successfully!"
