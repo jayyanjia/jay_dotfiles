@@ -1,34 +1,62 @@
 #!/bin/bash
 
-# Application name, e.g., "Safari", "Mail", "Notes"
-APP_NAME="$1"
+# List of allowed applications (case-sensitive, as found in /Applications or ~/Applications)
+ALLOWED_APPS=("Safari" "Calendar" "Notes" "System Settings" "Terminal")
 
-if [ -z "$APP_NAME" ]; then
-  echo "Usage: $0 <Application Name>"
-  exit 1
-fi
+# Function to generate Dock entry for a given app
+generate_dock_entry() {
+  local app_name="$1"
+  local app_path=$(mdfind "kMDItemKind == 'Application'" | grep -i "/${app_name}.app$" | head -n 1)
 
-# Get the path to the app
-APP_PATH=$(mdfind "kMDItemKind == 'Application'" | grep -i "/${APP_NAME}.app$" | head -n 1)
+  if [ -z "$app_path" ]; then
+    echo "Warning: $app_name not found."
+    return
+  fi
 
-if [ -z "$APP_PATH" ]; then
-  echo "Application '$APP_NAME' not found."
-  exit 1
-fi
+  echo "
+    <dict>
+      <key>tile-data</key>
+      <dict>
+        <key>file-data</key>
+        <dict>
+          <key>_CFURLString</key>
+          <string>file://${app_path}</string>
+          <key>_CFURLStringType</key>
+          <integer>15</integer>
+        </dict>
+      </dict>
+      <key>tile-type</key>
+      <string>file-tile</string>
+    </dict>"
+}
 
-# Escape slashes for use in sed
-ESCAPED_APP_PATH=$(echo "$APP_PATH" | sed 's/\//\\\//g')
+# Begin writing new Dock plist content
+NEW_ITEMS=""
+for app in "${ALLOWED_APPS[@]}"; do
+  NEW_ITEMS+=$(generate_dock_entry "$app")
+done
 
-# Backup Dock plist
-cp ~/Library/Preferences/com.apple.dock.plist ~/Library/Preferences/com.apple.dock.plist.backup
+# Assemble complete plist structure
+PLIST_CONTENT="<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
+<dict>
+  <key>persistent-apps</key>
+  <array>
+    $NEW_ITEMS
+  </array>
+</dict>
+</plist>"
 
-# Remove the app from persistent-apps
-defaults read com.apple.dock persistent-apps | \
-  plutil -convert xml1 - -o - | \
-  sed "/$ESCAPED_APP_PATH/d" | \
-  plutil -convert binary1 - -o ~/Library/Preferences/com.apple.dock.plist
+# Backup current Dock plist
+DOCK_PLIST=~/Library/Preferences/com.apple.dock.plist
+cp "$DOCK_PLIST" "${DOCK_PLIST}.backup.$(date +%s)"
+
+# Write new plist to temporary file and convert to binary
+echo "$PLIST_CONTENT" > /tmp/new_dock.plist
+plutil -convert binary1 /tmp/new_dock.plist -o "$DOCK_PLIST"
 
 # Restart the Dock
 killall Dock
 
-echo "Removed '$APP_NAME' from the Dock."
+echo "Dock updated. Only the following apps are kept: ${ALLOWED_APPS[*]}"
