@@ -1,75 +1,32 @@
 #!/bin/bash
 
-# Define an array of packages to install using Homebrew
-packages=(
-    "git"
-    "python"
-    "pyenv"
-)
+# Exit on error
+set -e
 
-# Define an array of applications to install using Homebrew Cask.
-apps=(
-    "google-chrome"
-    "firefox"
-    "visual-studio-code"
-    "vlc"
-    "rectangle"
-    "iterm2"
-)
+echo "🔧 Starting macOS setup..."
 
-# Define an array of fonts to install using Homebrew Cask.
-fonts=(
-    "font-fira-code"
-    "font-source-code-pro"
-)
-
-# Function to check if a package is installed
-is_installed() {
-    brew list "$1" &> /dev/null
-}
-
-# Function to check if an application is installed
-is_app_installed() {
-    brew list --cask "$1" &> /dev/null
-}
-
-# Check if Homebrew is installed; if not, install it
-if ! command -v brew &> /dev/null; then
-    echo "Homebrew not found. Installing Homebrew..."
+# Check if Homebrew is installed
+if ! command -v brew &> /dev/null
+then
+    echo "📦 Homebrew not found. Installing..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+else
+    echo "✅ Homebrew is already installed."
 fi
 
-# Install packages using Homebrew
-echo "Installing packages..."
-for package in "${packages[@]}"; do
-    if is_installed "$package"; then
-        echo "$package is already installed"
-    else
-        echo "Installing $package..."
-        brew install "$package"
-    fi
-done
+echo "🔄 Updating Homebrew..."
+brew update
 
-# Install applications using Homebrew Cask
-echo "Installing applications..."
-for app in "${apps[@]}"; do
-    if is_app_installed "$app"; then
-        echo "$app is already installed"
-    else
-        echo "Installing $app..."
-        brew install --cask "$app"
-    fi
-done
+echo "🍺 Installing apps via Homebrew Cask..."
 
-# Install fonts using Homebrew Cask
-echo "Installing fonts..."
-for font in "${fonts[@]}"; do
-    if is_app_installed "$font"; then
-        echo "$font is already installed"
-    else
-        echo "Installing $font..."
-        brew install --cask "$font"
-    fi
-done
+brew install --cask google-chrome
+brew install --cask firefox
+brew install --cask brave-browser
+brew install --cask visual-studio-code
+brew install --cask rectangle
+brew install --cask iterm2
+brew install --cask vlc
 
-echo "All packages, applications, and fonts installed successfully."
+echo "🎉 All apps installed successfully!"
